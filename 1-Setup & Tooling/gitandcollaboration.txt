@@ -1,0 +1,38 @@
+STEP-1: Configure Git
+│   git config --global user.name "Your Name"
+│   git config --global user.email "youremailaddress@gmail.com"
+
+
+STEP-2: Clone Repository
+│   git clone <repository-url>
+
+
+STEP-3: The Daily Workflow
+│   git status
+│   git add file.py
+│   git add .
+│   git commit -m "Add perceptron implementation"
+│   git push origin main
+
+
+STEP-4: Branching For Experiments
+│   git checkout -b experiment/new-optimizer
+
+│   # ... make changes, commit ...
+
+│   git checkout main
+│   git merge experiment/new-optimizer
+
+
+STEP-5: View History
+│   git log --oneline
+
+
+Git Cheat Sheet
+| Command                | Purpose                             |
+|------------------------|-------------------------------------|
+| `git clone`            | Download a repository               |
+| `git add + git commit` | Save your work                      |
+| `git push`             | Upload work to GitHub               |
+| `git checkout -b`      | Create a new branch for experiments |
+| `git log --oneline`    | View commit history                 |
