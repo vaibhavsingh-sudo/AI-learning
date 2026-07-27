@@ -1,0 +1,6 @@
+pyproject.toml
+ai_engineering_from_scratch.egg-info/PKG-INFO
+ai_engineering_from_scratch.egg-info/SOURCES.txt
+ai_engineering_from_scratch.egg-info/dependency_links.txt
+ai_engineering_from_scratch.egg-info/requires.txt
+ai_engineering_from_scratch.egg-info/top_level.txt
