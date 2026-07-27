@@ -473,8 +473,8 @@ Reusable utilities, production code, and training pipelines should be moved into
 # Files Used
 
 ```
-notebook_tips.py
-outputs/prompt-notebook-helper.md
+jupyter_firstrun.py
+jupyter.md
 ```
 
 ---
