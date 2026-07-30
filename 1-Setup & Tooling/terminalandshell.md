@@ -1,337 +1,437 @@
-Terminal & Shell
-The terminal is where AI engineers live. Get comfortable here.
-Type: Learn
+# Terminal & Shell for AI Engineering
 
-Languages: --
+## Know Your Shell
 
-Prerequisites: Phase 0, Lesson 01
-
-Time: ~35 minutes
-
-🎯 Learning Objectives
-Use piping, redirects, and grep to filter and process training logs from the command line
-Create persistent tmux sessions with multiple panes for concurrent training and GPU monitoring
-Monitor system and GPU resources with htop, nvtop, and nvidia-smi
-Transfer files between local and remote machines using SSH, scp, and rsync
-The Problem
-You will spend more time in the terminal than in any editor. Training runs, GPU monitoring, log tailing, remote SSH sessions, environment management. Every AI workflow touches the shell. If you're slow here, you're slow everywhere.
-
-This lesson covers the terminal skills that matter for AI work. No history of Unix. No deep-dive into Bash scripting. Just what you need.
-
-✅ Pre-Lesson Check
-1. What does the pipe operator '|' do in a shell command?
-✗
-Runs two commands in parallel
-✓
-Sends the standard output of one command as standard input to the next
-Saves the output of a command to a file
-Combines two files into one
-The pipe operator connects commands in a pipeline. For example, 'cat log.txt | grep error' sends the contents of log.txt as input to grep, which filters for lines containing 'error'.
-2. What happens to a running process when you close the terminal that started it?
-The process continues running in the background
-✓
-The process receives a hangup signal (SIGHUP) and typically terminates
-The process pauses until you open a new terminal
-The process automatically migrates to a system service
-Closing the terminal sends SIGHUP to child processes, which causes them to terminate by default. Tools like tmux, nohup, or screen prevent this.
-1/2 correct
-The Concept
-Expand
-tmux session: training
-
-Top row
-
-Pane 1: Training run
-python train.py
-Epoch 12/100 ...
-
-Pane 2: GPU monitor
-watch -n1 nvidia-smi
-GPU: 78% | Mem: 14/24G
-
-Pane 3: Logs + experiments
-tail -f logs/train.log | grep loss
-
-Three things running at once. One terminal. You can detach, go home, SSH back in, and reattach. The training keeps running.
-
-Build It
-Step 1: Know your shell
-Check which shell you're running:
-
-bashCopy
+```bash
 echo $SHELL
-Most systems use bash or zsh. Both work fine. The commands in this course work in either.
+```
 
-Key things to know:
+Common shells:
+- bash
+- zsh
 
-bashCopy
-# Move around
+---
+
+## Basic Navigation
+
+```bash
 cd ~/projects/ai-engineering-from-scratch
 pwd
 ls -la
+```
 
-# History search (most useful shortcut you'll learn)
-# Ctrl+R then type part of a previous command
-# Press Ctrl+R again to cycle through matches
+Useful Shortcuts
 
-# Clear terminal
-clear   # or Ctrl+L
+- `Ctrl + R` → Search command history
+- `Ctrl + L` → Clear terminal
+- `Ctrl + C` → Stop current command
+- `Ctrl + Z` → Suspend command (`fg` to resume)
 
-# Cancel a running command
-# Ctrl+C
+---
 
-# Suspend a running command (resume with fg)
-# Ctrl+Z
-Step 2: Piping and redirects
-Piping connects commands together. This is how you process logs, filter output, and chain tools. You will use this constantly.
+## Piping & Redirects
 
-bashCopy
-# Count how many times "loss" appears in a log
+### Count occurrences
+
+```bash
 cat train.log | grep "loss" | wc -l
+```
 
-# Extract just the loss values from training output
+### Extract loss values
+
+```bash
 grep "loss:" train.log | awk '{print $NF}' > losses.txt
+```
 
-# Watch a log file update in real time, filtering for errors
+### Monitor errors in real time
+
+```bash
 tail -f train.log | grep --line-buffered "ERROR"
+```
 
-# Sort experiments by final accuracy
+### Sort experiments
+
+```bash
 grep "final_accuracy" results/*.log | sort -t= -k2 -n -r
+```
 
-# Redirect stdout and stderr to separate files
+### Redirect Output
+
+```bash
 python train.py > output.log 2> errors.log
+```
 
-# Redirect both to the same file
-python train.py > train_full.log 2>&1
-The three redirects you need:
+### Redirect Everything
 
-Symbol	What it does
->	Write stdout to file (overwrite)
->>	Append stdout to file
-2>	Write stderr to file
-2>&1	Send stderr to same place as stdout
-|	Send stdout of one command as stdin to the next
-Step 3: Background processes
-Training runs take hours. You don't want to keep your terminal open the whole time.
+```bash
+python train.py > train.log 2>&1
+```
 
-bashCopy
-# Run in background (output still goes to terminal)
+---
+
+## Redirect Symbols
+
+| Symbol | Meaning |
+|--------|---------|
+| `>` | Overwrite output |
+| `>>` | Append output |
+| `2>` | Redirect errors |
+| `2>&1` | Merge stdout & stderr |
+| `|` | Pipe output |
+
+---
+
+## Background Processes
+
+### Run in background
+
+```bash
 python train.py &
+```
 
-# Run in background, immune to hangup (closing terminal won't kill it)
+### Survive terminal close
+
+```bash
 nohup python train.py > train.log 2>&1 &
+```
 
-# Check what's running in background
+### Running jobs
+
+```bash
 jobs
 ps aux | grep train.py
+```
 
-# Bring a background job to foreground
+### Resume
+
+```bash
 fg %1
+```
 
-# Kill a background process
+### Kill process
+
+```bash
 kill %1
-# or find its PID and kill that
+```
+
+or
+
+```bash
 kill $(pgrep -f "train.py")
-The difference between &, nohup, and screen/tmux:
+```
 
-Method	Survives terminal close?	Can reattach?
-command &	No	No
-nohup command &	Yes	No (check log file)
-screen / tmux	Yes	Yes
-For anything longer than a few minutes, use tmux.
+---
 
-Step 4: tmux
-tmux lets you create persistent terminal sessions with multiple panes. This is the single most useful tool for managing training runs.
+## Background Methods
 
-bashCopy
-# Install
-# macOS
-brew install tmux
+| Method | Terminal Safe | Reattach |
+|---------|---------------|----------|
+| `command &` | ❌ | ❌ |
+| `nohup command &` | ✅ | ❌ |
+| `tmux` | ✅ | ✅ |
+
+---
+
+# tmux
+
+### Install
+
+```bash
 # Ubuntu
 sudo apt install tmux
 
-# Start a named session
+# macOS
+brew install tmux
+```
+
+### Commands
+
+```bash
 tmux new -s training
-
-# Split horizontally
-# Ctrl+B then "
-
-# Split vertically
-# Ctrl+B then %
-
-# Navigate between panes
-# Ctrl+B then arrow keys
-
-# Detach (session keeps running)
-# Ctrl+B then d
-
-# Reattach
 tmux attach -t training
-
-# List sessions
 tmux ls
-
-# Kill a session
 tmux kill-session -t training
-A typical AI workflow session:
+```
 
-bashCopy
+### Shortcuts
+
+- `Ctrl+B` `"` → Horizontal split
+- `Ctrl+B` `%` → Vertical split
+- `Ctrl+B` `Arrow` → Switch pane
+- `Ctrl+B` `d` → Detach session
+
+---
+
+## AI Workflow Example
+
+```bash
 tmux new -s train
 
-# Pane 1: start training
 python train.py --epochs 100 --lr 1e-4
 
-# Ctrl+B, " to split, then run GPU monitor
 watch -n1 nvidia-smi
 
-# Ctrl+B, % to split vertically, tail the logs
 tail -f logs/experiment.log
+```
 
-# Now detach with Ctrl+B, d
-# SSH out, go get coffee, come back
-# tmux attach -t train
-Step 5: Monitoring with htop and nvtop
-bashCopy
-# System processes (better than top)
+Detach with:
+
+```
+Ctrl+B then d
+```
+
+Reattach:
+
+```bash
+tmux attach -t train
+```
+
+---
+
+# Monitoring
+
+### CPU
+
+```bash
 htop
+```
 
-# GPU processes (if you have NVIDIA GPU)
-# Install: sudo apt install nvtop (Ubuntu) or brew install nvtop (macOS)
+### GPU
+
+```bash
 nvtop
+```
 
-# Quick GPU check without nvtop
+### NVIDIA Status
+
+```bash
 nvidia-smi
+```
 
-# Watch GPU usage update every second
+### Live GPU Monitor
+
+```bash
 watch -n1 nvidia-smi
+```
 
-# See which processes are using the GPU
+### GPU Processes
+
+```bash
 nvidia-smi --query-compute-apps=pid,name,used_memory --format=csv
-htop keybindings you'll use:
+```
 
-F6 or > to sort by column (sort by memory to find memory leaks)
-F5 to toggle tree view (see child processes)
-F9 to kill a process
-/ to search for a process name
-Step 6: SSH for remote GPU boxes
-When you rent a cloud GPU (Lambda, RunPod, Vast.ai), you connect via SSH.
+---
 
-bashCopy
-# Basic connection
-ssh user@gpu-box-ip
+## htop Shortcuts
 
-# With a specific key
-ssh -i ~/.ssh/my_gpu_key user@gpu-box-ip
+- `F6` → Sort
+- `F5` → Tree view
+- `F9` → Kill process
+- `/` → Search process
 
-# Copy files to remote
-scp model.pt user@gpu-box-ip:~/models/
+---
 
-# Copy files from remote
-scp user@gpu-box-ip:~/results/metrics.json ./
+# SSH
 
-# Sync a whole directory (faster for many files)
-rsync -avz ./data/ user@gpu-box-ip:~/data/
+### Connect
 
-# Port forward (access remote Jupyter/TensorBoard locally)
-ssh -L 8888:localhost:8888 user@gpu-box-ip
-# Now open localhost:8888 in your browser
+```bash
+ssh user@gpu-box
+```
 
-# SSH config for convenience
-# Add to ~/.ssh/config:
-# Host gpu
-#     HostName 192.168.1.100
-#     User ubuntu
-#     IdentityFile ~/.ssh/gpu_key
-#
-# Then just:
-# ssh gpu
-Step 7: Useful aliases for AI work
-Add these to your ~/.bashrc or ~/.zshrc:
+### With SSH Key
 
-bashCopy
-source phases/00-setup-and-tooling/10-terminal-and-shell/code/shell_aliases.sh
-Or copy the ones you want. The key aliases:
+```bash
+ssh -i ~/.ssh/my_gpu_key user@gpu-box
+```
 
-bashCopy
-# GPU status at a glance
+### Upload File
+
+```bash
+scp model.pt user@gpu-box:~/models/
+```
+
+### Download File
+
+```bash
+scp user@gpu-box:~/results/metrics.json ./
+```
+
+### Sync Folder
+
+```bash
+rsync -avz ./data/ user@gpu-box:~/data/
+```
+
+### Port Forward
+
+```bash
+ssh -L 8888:localhost:8888 user@gpu-box
+```
+
+Open:
+
+```
+http://localhost:8888
+```
+
+---
+
+# Useful Aliases
+
+```bash
 alias gpu='nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader'
 
-# Kill all Python training processes
 alias killtraining='pkill -f "python.*train"'
 
-# Quick virtual environment activate
 alias ae='source .venv/bin/activate'
 
-# Watch training loss
 alias watchloss='tail -f logs/*.log | grep --line-buffered "loss"'
-See code/shell_aliases.sh for the full set.
+```
 
-Step 8: Common AI terminal patterns
-These come up repeatedly in practice:
+---
 
-bashCopy
-# Run training, log everything, notify when done
-python train.py 2>&1 | tee train.log; echo "DONE" | mail -s "Training complete" you@email.com
+# Common AI Commands
 
-# Compare two experiment logs side by side
+### Log Everything
+
+```bash
+python train.py 2>&1 | tee train.log
+```
+
+### Compare Logs
+
+```bash
 diff <(grep "accuracy" exp1.log) <(grep "accuracy" exp2.log)
+```
 
-# Find the largest model files (clean up disk space)
+### Largest Model Files
+
+```bash
 find . -name "*.pt" -o -name "*.safetensors" | xargs du -h | sort -rh | head -20
+```
 
-# Download a model from Hugging Face
+### Download Model
+
+```bash
 wget https://huggingface.co/model/resolve/main/model.safetensors
+```
 
-# Untar a dataset
+### Extract Dataset
+
+```bash
 tar xzf dataset.tar.gz -C ./data/
+```
 
-# Count lines in all Python files (see how big your project is)
+### Count Python Lines
+
+```bash
 find . -name "*.py" | xargs wc -l | tail -1
+```
 
-# Check disk space (training data fills disks fast)
+### Disk Usage
+
+```bash
 df -h
 du -sh ./data/*
+```
 
-# Environment variable check before training
+### Environment Variables
+
+```bash
 env | grep -i cuda
 env | grep -i torch
-Use It
-Here's when each tool comes into play during this course:
+```
 
-Tool	When you use it
-tmux	Every training run (Phases 3+)
-tail -f + grep	Monitoring training logs
-nohup / &	Quick background tasks
-htop / nvtop	Debugging slow training, OOM errors
-SSH + rsync	Working on cloud GPUs
-Piping + redirects	Processing experiment results
-Aliases	Saving time on repetitive commands
-Exercises
-Install tmux, create a session with three panes, and run htop in one, watch -n1 date in another, and a Python script in the third. Detach and reattach.
-Add the aliases from code/shell_aliases.sh to your shell config and reload with source ~/.zshrc (or ~/.bashrc).
-Create a fake training log with for i in $(seq 1 100); do echo "epoch $i loss: $(echo "scale=4; 1/$i" | bc)"; sleep 0.1; done > fake_train.log and then use grep, tail, and awk to extract just the loss values.
-Set up an SSH config entry for a server you have access to (or use localhost to practice the syntax).
-✅ Post-Lesson Quiz
-1. What is the key advantage of tmux over using 'nohup command &' for long-running training jobs?
-tmux uses less CPU than nohup
-tmux lets you detach, reattach, and see live output with multiple panes
-tmux automatically restarts failed processes
-tmux compresses the process output to save disk space
-2. What does 'python train.py > output.log 2>&1' accomplish?
-Runs train.py and saves only errors to output.log
-Runs train.py and redirects both standard output and standard error to output.log
-Runs train.py twice and logs the second run
-Runs train.py with double the memory allocation
-3. Which command lets you access a remote Jupyter notebook running on port 8888 of a GPU box from your local browser?
-scp -P 8888 user@gpu-box:~/notebook.ipynb
-ssh -L 8888:localhost:8888 user@gpu-box
-rsync -avz user@gpu-box:8888 localhost:8888
-ssh user@gpu-box --forward-port 8888
-Key Terms
-Term	What people say	What it actually means
-Shell	"The terminal"	The program that interprets your commands (bash, zsh, fish)
-tmux	"Terminal multiplexer"	A program that lets you run multiple terminal sessions inside one window, and detach/reattach
-Pipe	"The bar thing"	The | operator that sends one command's output as input to another
-PID	"Process ID"	A unique number assigned to every running process, used to monitor or kill it
-nohup	"No hangup"	Runs a command immune to the hangup signal, so closing the terminal won't kill it
-SSH	"Connecting to the server"	Secure Shell, an encrypted protocol for running commands on a remote machine
+---
+
+# Tool Usage
+
+| Tool | Purpose |
+|------|---------|
+| tmux | Persistent training sessions |
+| tail + grep | Monitor logs |
+| nohup | Background jobs |
+| htop | CPU monitoring |
+| nvtop | GPU monitoring |
+| SSH | Remote GPU access |
+| rsync | Sync files |
+| Pipe & Redirects | Process logs |
+| Aliases | Faster workflow |
+
+---
+
+# Post-Lesson Quiz
+
+### 1. What is the biggest advantage of `tmux`?
+
+- Uses less CPU
+- ✅ Detach & reattach with live multiple panes
+- Restarts failed processes
+- Compresses output
+
+**Explanation**
+
+`tmux` keeps terminal sessions alive after disconnecting and allows multiple panes in one window.
+
+---
+
+### 2. What does this command do?
+
+```bash
+python train.py > output.log 2>&1
+```
+
+- Errors only
+- ✅ Redirects both output and errors to `output.log`
+- Runs twice
+- Uses more memory
+
+**Explanation**
+
+`2>&1` sends **stderr** to the same destination as **stdout**.
+
+---
+
+### 3. How do you access a remote Jupyter Notebook locally?
+
+- `scp`
+- ✅ `ssh -L 8888:localhost:8888 user@gpu-box`
+- `rsync`
+- `ssh --forward-port`
+
+**Explanation**
+
+SSH port forwarding maps the remote notebook to your local browser.
+
+---
+
+# Quiz Score
+
+✅ **3 / 3 Correct**
+
+---
+
+# Key Terms
+
+| Term | Meaning |
+|------|---------|
+| Shell | Command interpreter (bash, zsh) |
+| tmux | Persistent terminal multiplexer |
+| Pipe (`|`) | Send output to another command |
+| PID | Process ID |
+| nohup | Ignore hangup signal |
+| SSH | Secure remote shell |
+
+---
+
+# Quick Facts
+
+- Use **`Ctrl+R`** to search command history.
+- Use **`tmux`** for long-running AI training.
+- Monitor GPUs with **`nvidia-smi`** or **`nvtop`**.
+- **`tail -f`** watches logs in real time.
+- **`nohup`** keeps jobs alive after terminal closes.
+- **`2>&1`** combines stdout and stderr.
+- **SSH + rsync** are essential for cloud GPU workflows.
+```
